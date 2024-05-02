@@ -4,7 +4,6 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:html';
 import 'dart:ui_web' as ui_web;
 
 import 'package:flutter/foundation.dart';
@@ -13,6 +12,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 // ignore: implementation_imports
 import 'package:webview_flutter_platform_interface/src/webview_flutter_platform_interface_legacy.dart';
+
 import 'http_request_factory.dart';
 
 /// Builds an iframe based WebView.
@@ -23,7 +23,7 @@ class WebWebViewPlatform implements WebViewPlatform {
   WebWebViewPlatform() {
     ui_web.platformViewRegistry.registerViewFactory(
         'webview-iframe',
-        (int viewId) => IFrameElement()
+        (int viewId) => HTMLIFrameElement()
           ..id = 'webview-$viewId'
           ..width = '100%'
           ..height = '100%'
@@ -45,11 +45,10 @@ class WebWebViewPlatform implements WebViewPlatform {
         if (onWebViewPlatformCreated == null) {
           return;
         }
-        final IFrameElement element =
-            document.getElementById('webview-$viewId')! as IFrameElement;
-        if (creationParams.initialUrl != null) {
-          // ignore: unsafe_html
-          element.src = creationParams.initialUrl;
+        final HTMLIFrameElement element =
+            document.getElementById('webview-$viewId')! as HTMLIFrameElement;
+        if (creationParams.initialUrl case final String initialUrl) {
+          element.src = initialUrl;
         }
         onWebViewPlatformCreated(WebWebViewPlatformController(
           element,
@@ -70,7 +69,7 @@ class WebWebViewPlatformController implements WebViewPlatformController {
   /// Constructs a [WebWebViewPlatformController].
   WebWebViewPlatformController(this._element);
 
-  final IFrameElement _element;
+  final HTMLIFrameElement _element;
   HttpRequestFactory _httpRequestFactory = const HttpRequestFactory();
 
   /// Setter for setting the HttpRequestFactory, for testing purposes.
@@ -199,7 +198,7 @@ class WebWebViewPlatformController implements WebViewPlatformController {
     if (!request.uri.hasScheme) {
       throw ArgumentError('WebViewRequest#uri is required to have a scheme.');
     }
-    final HttpRequest httpReq = await _httpRequestFactory.request(
+    final XMLHttpRequest httpReq = await _httpRequestFactory.request(
         request.uri.toString(),
         method: request.method.serialize(),
         requestHeaders: request.headers,
@@ -208,7 +207,7 @@ class WebWebViewPlatformController implements WebViewPlatformController {
         httpReq.getResponseHeader('content-type') ?? 'text/html';
     // ignore: unsafe_html
     _element.src = Uri.dataFromString(
-      httpReq.responseText ?? '',
+      httpReq.responseText,
       mimeType: contentType,
       encoding: utf8,
     ).toString();
